@@ -73,7 +73,7 @@ function makeControllerDraw(
       ctx.strokeRect(cx, cy, cw, ch)
 
       // "Via +CREW Exclusive" — top right of image, scaled to fit controller width
-      let viaSize = 36
+      let viaSize = 16
       ctx.font = `${viaSize}px "Horizon"`
       while (ctx.measureText('Via +CREW Exclusive').width > cw && viaSize > 1) {
         viaSize--
@@ -89,18 +89,24 @@ function makeControllerDraw(
       if (logo.complete) drawLogo()
       else logo.addEventListener('load', drawLogo, { once: true })
 
-      // Bottom-left text aligned with chevron
+      // Bottom-left text with per-line dark background
       ctx.textAlign = 'left'
       ctx.textBaseline = 'top'
       ctx.font = '40px "Horizon"'
-      ctx.strokeStyle = '#000'
-      ctx.lineWidth = 6
-      ctx.lineJoin = 'round'
-      ctx.strokeText('FIGHTSTICK', 60, height - 180)
-      ctx.strokeText('FRIDAY', 60, height - 140)
+      const padX = 16
+      const padY = 10
+      const lineH = 38
+      const textX = 60
+      const textY1 = height - 180
+      const textY2 = textY1 + lineH
+      const w1 = ctx.measureText('FIGHTSTICK').width
+      const w2 = ctx.measureText('FRIDAY').width
+      ctx.fillStyle = '#111111'
+      ctx.fillRect(textX - padX, textY1 - padY, w1 + padX * 2, lineH + padY * 2)
+      ctx.fillRect(textX - padX, textY2 - padY, w2 + padX * 2, lineH + padY * 2)
       ctx.fillStyle = '#fff'
-      ctx.fillText('FIGHTSTICK', 60, height - 180)
-      ctx.fillText('FRIDAY', 60, height - 140)
+      ctx.fillText('FIGHTSTICK', textX, textY1)
+      ctx.fillText('FRIDAY', textX, textY2)
 
       // Triple arrow (unblurred)
       tripleArrow(ctx, { color: '#ffffff', gap: 4, size: 80, x: width - 320, y: height - 160 })
@@ -147,7 +153,7 @@ function makeDraw(
       ctx.textBaseline = 'alphabetic'
       const cx = width / 2
 
-      ctx.font = '120px "Horizon"'
+      ctx.font = '121px "Horizon"'
       ctx.fillStyle = '#fff'
       ctx.fillText('FIGHTSTICK', cx, height * 0.41)
 
