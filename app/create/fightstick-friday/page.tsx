@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useCallback, useRef, forwardRef } from 'react'
-import { useRipple } from '@/app/hooks/useRipple'
 import dynamic from 'next/dynamic'
 import type { DBoardHandle } from '@/app/components/DBoard'
 import { tripleArrow } from '@/app/components/DBoard/drawing-actions/triple-arrow'
@@ -193,34 +192,24 @@ const BoardItem = forwardRef<DBoardHandle, {
 })
 
 const UploadedImage = ({ image, onRemove }: { image: IUploadedImage; onRemove: () => void }) => {
-  return <div className='outline outline-1 outline-black overflow-hidden text-black flex items-center rounded shrink-0'>
+  return <div className='border-2 border-[#ff2255] overflow-hidden text-[#ff2255] flex items-center shrink-0'>
     <p className='flex-1 px-2 py-1 text-xs truncate'>{image.filename}</p>
-    <button onClick={onRemove} className='shrink-0 border-l border-black px-2 py-1 text-xs hover:bg-black hover:text-white cursor-pointer'>✕</button>
+    <button onClick={onRemove} className='shrink-0 border-l-2 border-[#ff2255] px-2 py-1 text-xs hover:bg-[#ff2255] hover:text-black cursor-pointer'>✕</button>
   </div>
 }
 
 export default function FightstickFriday() {
   const [bgImage, setBgImage] = useState('/W1.png')
   const bgInputRef = useRef<HTMLInputElement>(null)
-  const bgRipple = useRipple()
-  const ctrlRipple = useRipple()
   const [controllerImages, setControllerImages] = useState<IUploadedImage[]>([])
   const [generatedImages, setGeneratedImages] = useState<(IUploadedImage | null)[]>([])
-  const [hostInput, setHostInput] = useState('Louna')
   const [host, setHost] = useState('Louna')
 
-  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const boardRef = useRef<DBoardHandle>(null)
   const boardRefs = useRef<(DBoardHandle | null)[]>([])
   const imgCache = useRef(new Map<string, HTMLImageElement>())
   const fontReady = useRef<Promise<void> | null>(null)
-
-  function onHostChange(value: string) {
-    setHostInput(value)
-    if (debounceTimer.current) clearTimeout(debounceTimer.current)
-    debounceTimer.current = setTimeout(() => setHost(value), 300)
-  }
 
   function saveAsImage() {
     const refs = generatedImages.length > 0 ? boardRefs.current : [boardRef.current]
@@ -240,32 +229,29 @@ export default function FightstickFriday() {
   )
 
   return (
-    <div className="flex h-full">
-      <aside className="w-64 shrink-0 bg-white border-r border-gray-200 flex flex-col gap-4 p-4 overflow-y-auto min-h-0">
-        <label className="flex flex-col gap-1 text-sm text-black">
+    <div className="flex h-full bg-black">
+      <aside className="w-64 shrink-0 bg-black border-r-2 border-[#ff2255] flex flex-col gap-4 p-4 overflow-y-auto min-h-0">
+        <label className="flex flex-col gap-1 text-xs font-bold uppercase text-[#ff2255]">
           Background image
-          <div className="relative overflow-hidden rounded" onMouseDown={bgRipple.trigger}>
-            {bgRipple.nodes}
-            <input
-              ref={bgInputRef}
-              type="file"
-              accept="image/*"
-              className="relative text-sm text-black border border-gray-300 rounded px-2 py-1 cursor-pointer w-full"
-              onChange={(e) => {
-                const file = e.target.files?.[0]
-                if (!file) return
-                const prev = bgImage
-                const url = URL.createObjectURL(file)
-                if (prev !== '/W1.png') URL.revokeObjectURL(prev)
-                imgCache.current.delete(prev)
-                setBgImage(url)
-              }}
-            />
-          </div>
+          <input
+            ref={bgInputRef}
+            type="file"
+            accept="image/*"
+            className="relative text-xs text-[#ff2255] border-2 border-[#ff2255] px-2 py-1 cursor-pointer w-full bg-black file:bg-[#ff2255] file:text-black file:border-0 file:text-xs file:font-bold file:uppercase file:cursor-pointer file:mr-2 file:px-2"
+            onChange={(e) => {
+              const file = e.target.files?.[0]
+              if (!file) return
+              const prev = bgImage
+              const url = URL.createObjectURL(file)
+              if (prev !== '/W1.png') URL.revokeObjectURL(prev)
+              imgCache.current.delete(prev)
+              setBgImage(url)
+            }}
+          />
           {bgImage !== '/W1.png' && (
             <button
               type="button"
-              className="text-xs text-gray-400 hover:text-black text-left cursor-pointer"
+              className="text-xs text-[#ff225566] hover:text-[#ff2255] text-left cursor-pointer uppercase font-bold"
               onClick={() => {
                 URL.revokeObjectURL(bgImage)
                 imgCache.current.delete(bgImage)
@@ -277,44 +263,40 @@ export default function FightstickFriday() {
             </button>
           )}
         </label>
-        <label className="flex flex-col gap-1 text-sm text-black">
+        <label className="flex flex-col gap-1 text-xs font-bold uppercase text-[#ff2255]">
           Host
           <input
-            className="border border-gray-300 rounded px-2 py-1 text-sm"
-            value={hostInput}
-            onChange={(e) => onHostChange(e.target.value)}
+            className="border-2 border-[#ff2255] px-2 py-1 text-sm bg-black text-[#ff2255] outline-none"
+            value={host}
+            onChange={(e) => setHost(e.target.value)}
           />
         </label>
-        <label className="flex flex-col gap-1 text-sm text-black">
+        <label className="flex flex-col gap-1 text-xs font-bold uppercase text-[#ff2255]">
           Controller images
-          <div className="relative overflow-hidden rounded" onMouseDown={ctrlRipple.trigger}>
-            {ctrlRipple.nodes}
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              multiple
-              className="relative text-sm text-black border border-gray-300 rounded px-2 py-1 cursor-pointer w-full"
-              onChange={(e) => {
-                const files = Array.from(e.target.files ?? [])
-                const urls = files.map((f) => {
-                  const url = URL.createObjectURL(f);
-                  return {
-                    id: url,
-                    filename: f.name,
-                    url: url,
-                  } as IUploadedImage
-                })
-                if (fileInputRef.current) fileInputRef.current.value = ''
-                setControllerImages((prev) => [...prev, ...urls])
-              }}
-            />
-          </div>
-          {controllerImages.length > 0 && (
-            <span className="text-xs text-gray-400">
-              {controllerImages.length} image{controllerImages.length > 1 ? 's' : ''} selected
-            </span>
-          )}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            className="relative text-xs text-[#ff2255] border-2 border-[#ff2255] px-2 py-1 cursor-pointer w-full bg-black file:bg-[#ff2255] file:text-black file:border-0 file:text-xs file:font-bold file:uppercase file:cursor-pointer file:mr-2 file:px-2"
+            onChange={(e) => {
+              const files = Array.from(e.target.files ?? [])
+              const urls = files.map((f) => {
+                const url = URL.createObjectURL(f);
+                return {
+                  id: url,
+                  filename: f.name,
+                  url: url,
+                } as IUploadedImage
+              })
+              if (fileInputRef.current) fileInputRef.current.value = ''
+              setControllerImages((prev) => {
+                const next = [...prev, ...urls]
+                setGeneratedImages([null, ...next])
+                return next
+              })
+            }}
+          />
         </label>
         {controllerImages.map((image) => {
           const remove = () => {
@@ -326,17 +308,10 @@ export default function FightstickFriday() {
         })}
         <button
           type="button"
-          className="border border-gray-300 rounded px-3 py-2 text-sm text-black hover:bg-gray-50 cursor-pointer active:bg-black active:text-white active:border-black"
-          onClick={() => setGeneratedImages([null, ...controllerImages])}
-        >
-          Generate
-        </button>
-        <button
-          type="button"
-          className="mt-auto border border-gray-300 rounded px-3 py-2 text-sm text-black hover:bg-gray-50 cursor-pointer active:bg-black active:text-white active:border-black"
+          className="mt-auto border-2 border-[#ff2255] px-3 py-2 text-xs font-bold uppercase text-[#ff2255] hover:bg-[#ff2255] hover:text-black transition-colors cursor-pointer"
           onClick={saveAsImage}
         >
-          Save as image
+          Save all as image
         </button>
       </aside>
       <main className="flex-1 flex items-center overflow-x-auto gap-4 px-4">
