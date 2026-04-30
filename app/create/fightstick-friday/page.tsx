@@ -4,6 +4,7 @@ import { useState, useCallback, useRef, forwardRef } from 'react'
 import dynamic from 'next/dynamic'
 import type { DBoardHandle } from '@/app/components/DBoard'
 import { tripleArrow } from '@/app/components/DBoard/drawing-actions/triple-arrow'
+import { IUploadedImage } from './types/controller-images'
 
 const DBoard = dynamic(() => import('@/app/components/DBoard'), { ssr: false })
 
@@ -175,10 +176,17 @@ const BoardItem = forwardRef<DBoardHandle, {
   return <DBoard ref={ref} width={1440} height={1800} previewWidth={360} drawAction={draw} />
 })
 
+const UploadedImage = ({ image, onRemove }: { image: IUploadedImage; onRemove: () => void }) => {
+  return <div className='outline outline-1 outline-black overflow-hidden text-black flex items-center rounded'>
+    <p className='flex-1 px-2 py-1 text-xs truncate'>{image.filename}</p>
+    <button onClick={onRemove} className='shrink-0 border-l border-black px-2 py-1 text-xs hover:bg-black hover:text-white cursor-pointer'>✕</button>
+  </div>
+}
+
 export default function FightstickFriday() {
   const [bgImage] = useState('/W1.png')
-  const [controllerImages, setControllerImages] = useState<string[]>([])
-  const [generatedImages, setGeneratedImages] = useState<(string | null)[]>([])
+  const [controllerImages, setControllerImages] = useState<IUploadedImage[]>([])
+  const [generatedImages, setGeneratedImages] = useState<(IUploadedImage | null)[]>([])
   const [hostInput, setHostInput] = useState('Louna')
   const [host, setHost] = useState('Louna')
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -230,9 +238,16 @@ export default function FightstickFriday() {
             className="text-sm text-black border border-gray-300 rounded px-2 py-1"
             onChange={(e) => {
               const files = Array.from(e.target.files ?? [])
-              const urls = files.map((f) => URL.createObjectURL(f))
+              const urls = files.map((f) => {
+                return {
+                  filename: f.name,
+                  url: URL.createObjectURL(f),
+                } as IUploadedImage
+              })
               setControllerImages((prev) => {
-                prev.forEach(URL.revokeObjectURL)
+                prev.forEach((image) => {
+                  URL.revokeObjectURL(image.url)
+                })
                 return urls
               })
             }}
@@ -243,6 +258,14 @@ export default function FightstickFriday() {
             </span>
           )}
         </label>
+        {controllerImages.map((image) => {
+          const remove = () => {
+            URL.revokeObjectURL(image.url)
+            setControllerImages((prev) => prev.filter((i) => i.filename !== image.filename))
+            setGeneratedImages((prev) => prev.filter((i) => i?.filename !== image.filename))
+          }
+          return <UploadedImage image={image} key={image.filename} onRemove={remove} />
+        })}
         <button
           type="button"
           className="border border-gray-300 rounded px-3 py-2 text-sm text-black hover:bg-gray-50 cursor-pointer active:bg-black active:text-white active:border-black"
@@ -262,11 +285,11 @@ export default function FightstickFriday() {
         {generatedImages.length > 0 ? (
           generatedImages.map((img, i) => (
             <BoardItem
-              key={img ?? 'title'}
+              key={img?.url ?? 'title'}
               ref={(el) => { boardRefs.current[i] = el }}
               bgImage={bgImage}
               host={host}
-              controllerImage={img}
+              controllerImage={img?.url || null}
               imgCache={imgCache.current}
               fontReady={fontReady}
             />
