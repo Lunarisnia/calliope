@@ -11,7 +11,7 @@ const DBoard = dynamic(() => import('@/app/components/DBoard'), { ssr: false })
 
 
 function loadImg(img: HTMLImageElement): Promise<HTMLImageElement> {
-  return img.complete ? Promise.resolve(img) : new Promise(res => { img.onload = () => res(img) })
+  return img.complete ? Promise.resolve(img) : new Promise(res => img.addEventListener('load', () => res(img), { once: true }))
 }
 
 async function loadFonts(): Promise<void> {
@@ -83,7 +83,7 @@ function makeControllerDraw(
       // Logo (unblurred)
       const drawLogo = () => ctx.drawImage(logo, 70, 60, logo.naturalWidth * 0.3, logo.naturalHeight * 0.3)
       if (logo.complete) drawLogo()
-      else logo.onload = drawLogo
+      else logo.addEventListener('load', drawLogo, { once: true })
 
       // Bottom-left text aligned with chevron
       ctx.textAlign = 'left'
@@ -137,7 +137,7 @@ function makeDraw(
 
       const drawLogo = () => ctx.drawImage(logo, 70, 60, logo.naturalWidth * 0.3, logo.naturalHeight * 0.3)
       if (logo.complete) drawLogo()
-      else logo.onload = drawLogo
+      else logo.addEventListener('load', drawLogo, { once: true })
 
       ctx.textAlign = 'center'
       ctx.textBaseline = 'alphabetic'
