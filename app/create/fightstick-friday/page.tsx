@@ -1,12 +1,14 @@
 'use client'
 
 import { useState, useCallback, useRef, forwardRef } from 'react'
+import { useRipple } from '@/app/hooks/useRipple'
 import dynamic from 'next/dynamic'
 import type { DBoardHandle } from '@/app/components/DBoard'
 import { tripleArrow } from '@/app/components/DBoard/drawing-actions/triple-arrow'
 import { IUploadedImage } from './types/controller-images'
 
 const DBoard = dynamic(() => import('@/app/components/DBoard'), { ssr: false })
+
 
 function loadImg(img: HTMLImageElement): Promise<HTMLImageElement> {
   return img.complete ? Promise.resolve(img) : new Promise(res => { img.onload = () => res(img) })
@@ -198,7 +200,10 @@ const UploadedImage = ({ image, onRemove }: { image: IUploadedImage; onRemove: (
 }
 
 export default function FightstickFriday() {
-  const [bgImage] = useState('/W1.png')
+  const [bgImage, setBgImage] = useState('/W1.png')
+  const bgInputRef = useRef<HTMLInputElement>(null)
+  const bgRipple = useRipple()
+  const ctrlRipple = useRipple()
   const [controllerImages, setControllerImages] = useState<IUploadedImage[]>([])
   const [generatedImages, setGeneratedImages] = useState<(IUploadedImage | null)[]>([])
   const [hostInput, setHostInput] = useState('Louna')
@@ -238,6 +243,41 @@ export default function FightstickFriday() {
     <div className="flex h-full">
       <aside className="w-64 shrink-0 bg-white border-r border-gray-200 flex flex-col gap-4 p-4 overflow-y-auto min-h-0">
         <label className="flex flex-col gap-1 text-sm text-black">
+          Background image
+          <div className="relative overflow-hidden rounded" onMouseDown={bgRipple.trigger}>
+            {bgRipple.nodes}
+            <input
+              ref={bgInputRef}
+              type="file"
+              accept="image/*"
+              className="relative text-sm text-black border border-gray-300 rounded px-2 py-1 cursor-pointer w-full"
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                if (!file) return
+                const prev = bgImage
+                const url = URL.createObjectURL(file)
+                if (prev !== '/W1.png') URL.revokeObjectURL(prev)
+                imgCache.current.delete(prev)
+                setBgImage(url)
+              }}
+            />
+          </div>
+          {bgImage !== '/W1.png' && (
+            <button
+              type="button"
+              className="text-xs text-gray-400 hover:text-black text-left cursor-pointer"
+              onClick={() => {
+                URL.revokeObjectURL(bgImage)
+                imgCache.current.delete(bgImage)
+                setBgImage('/W1.png')
+                if (bgInputRef.current) bgInputRef.current.value = ''
+              }}
+            >
+              Reset to default
+            </button>
+          )}
+        </label>
+        <label className="flex flex-col gap-1 text-sm text-black">
           Host
           <input
             className="border border-gray-300 rounded px-2 py-1 text-sm"
@@ -247,26 +287,29 @@ export default function FightstickFriday() {
         </label>
         <label className="flex flex-col gap-1 text-sm text-black">
           Controller images
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            multiple
-            className="text-sm text-black border border-gray-300 rounded px-2 py-1"
-            onChange={(e) => {
-              const files = Array.from(e.target.files ?? [])
-              const urls = files.map((f) => {
-                const url = URL.createObjectURL(f);
-                return {
-                  id: url,
-                  filename: f.name,
-                  url: url,
-                } as IUploadedImage
-              })
-              if (fileInputRef.current) fileInputRef.current.value = ''
-              setControllerImages((prev) => [...prev, ...urls])
-            }}
-          />
+          <div className="relative overflow-hidden rounded" onMouseDown={ctrlRipple.trigger}>
+            {ctrlRipple.nodes}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              className="relative text-sm text-black border border-gray-300 rounded px-2 py-1 cursor-pointer w-full"
+              onChange={(e) => {
+                const files = Array.from(e.target.files ?? [])
+                const urls = files.map((f) => {
+                  const url = URL.createObjectURL(f);
+                  return {
+                    id: url,
+                    filename: f.name,
+                    url: url,
+                  } as IUploadedImage
+                })
+                if (fileInputRef.current) fileInputRef.current.value = ''
+                setControllerImages((prev) => [...prev, ...urls])
+              }}
+            />
+          </div>
           {controllerImages.length > 0 && (
             <span className="text-xs text-gray-400">
               {controllerImages.length} image{controllerImages.length > 1 ? 's' : ''} selected
