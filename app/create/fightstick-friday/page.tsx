@@ -204,6 +204,7 @@ export default function FightstickFriday() {
   const [controllerImages, setControllerImages] = useState<IUploadedImage[]>([])
   const [generatedImages, setGeneratedImages] = useState<(IUploadedImage | null)[]>([])
   const [host, setHost] = useState('Louna')
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const boardRef = useRef<DBoardHandle>(null)
@@ -230,7 +231,29 @@ export default function FightstickFriday() {
 
   return (
     <div className="flex h-full bg-black">
-      <aside className="w-64 shrink-0 bg-black border-r-2 border-[#ff2255] flex flex-col gap-4 p-4 overflow-y-auto min-h-0">
+      {/* Mobile toggle */}
+      <button
+        type="button"
+        onClick={() => setSidebarOpen((o) => !o)}
+        className="md:hidden fixed bottom-4 right-4 z-50 border-2 border-[#ff2255] bg-black text-[#ff2255] text-xs font-bold uppercase px-3 py-2 hover:bg-[#ff2255] hover:text-black transition-colors cursor-pointer"
+      >
+        {sidebarOpen ? 'Close' : 'Menu'}
+      </button>
+
+      {/* Overlay */}
+      {sidebarOpen && (
+        <div
+          className="md:hidden fixed inset-0 z-30 bg-black/60"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      <aside className={`
+        fixed inset-y-0 left-0 z-40 w-64 bg-black border-r-2 border-[#ff2255] flex flex-col gap-4 p-4 overflow-y-auto
+        transition-transform duration-200
+        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+        md:relative md:translate-x-0 md:shrink-0 md:min-h-0
+      `}>
         <label className="flex flex-col gap-1 text-xs font-bold uppercase text-[#ff2255]">
           Background image
           <input
