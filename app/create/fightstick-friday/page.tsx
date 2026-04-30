@@ -177,7 +177,7 @@ const BoardItem = forwardRef<DBoardHandle, {
 })
 
 const UploadedImage = ({ image, onRemove }: { image: IUploadedImage; onRemove: () => void }) => {
-  return <div className='outline outline-1 outline-black overflow-hidden text-black flex items-center rounded'>
+  return <div className='outline outline-1 outline-black overflow-hidden text-black flex items-center rounded shrink-0'>
     <p className='flex-1 px-2 py-1 text-xs truncate'>{image.filename}</p>
     <button onClick={onRemove} className='shrink-0 border-l border-black px-2 py-1 text-xs hover:bg-black hover:text-white cursor-pointer'>✕</button>
   </div>
@@ -189,7 +189,9 @@ export default function FightstickFriday() {
   const [generatedImages, setGeneratedImages] = useState<(IUploadedImage | null)[]>([])
   const [hostInput, setHostInput] = useState('Louna')
   const [host, setHost] = useState('Louna')
+
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const boardRef = useRef<DBoardHandle>(null)
   const boardRefs = useRef<(DBoardHandle | null)[]>([])
   const imgCache = useRef(new Map<string, HTMLImageElement>())
@@ -220,7 +222,7 @@ export default function FightstickFriday() {
 
   return (
     <div className="flex h-full">
-      <aside className="w-64 shrink-0 bg-white border-r border-gray-200 flex flex-col gap-4 p-4">
+      <aside className="w-64 shrink-0 bg-white border-r border-gray-200 flex flex-col gap-4 p-4 overflow-y-auto min-h-0">
         <label className="flex flex-col gap-1 text-sm text-black">
           Host
           <input
@@ -232,6 +234,7 @@ export default function FightstickFriday() {
         <label className="flex flex-col gap-1 text-sm text-black">
           Controller images
           <input
+            ref={fileInputRef}
             type="file"
             accept="image/*"
             multiple
@@ -244,6 +247,7 @@ export default function FightstickFriday() {
                   url: URL.createObjectURL(f),
                 } as IUploadedImage
               })
+              if (fileInputRef.current) fileInputRef.current.value = ''
               setControllerImages((prev) => {
                 prev.forEach((image) => {
                   URL.revokeObjectURL(image.url)
