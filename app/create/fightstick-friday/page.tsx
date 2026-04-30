@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import DBoard from '@/app/components/DBoard'
+import { tripleArrow } from '@/app/components/DBoard/drawing-actions/triple-arrow'
 
 export default function FightstickFriday() {
-  const [bgImage, setBgImage] = useState('https://fastly.picsum.photos/id/1/1440/1800.jpg?hmac=dTX3EZvsbTACYOE0nvBUYPvNxop_uRHzqwKUHtE6_-M')
+  const [bgImage, setBgImage] = useState('/W1.png')
   const [host, setHost] = useState('Louna')
   // 1. Create a canvas
   // 2. Render bg on a canvas
@@ -18,30 +19,84 @@ export default function FightstickFriday() {
   // TODO: I can focus on a canvas and it would show the state of that page
   // TODO: Multi canvas in a single page
 
+  const imgCache = useRef<Map<string, HTMLImageElement>>(new Map())
+  const fontReady = useRef<Promise<FontFace[]> | null>(null)
+
   const draw = useCallback((ctx: CanvasRenderingContext2D) => {
     const { width, height } = ctx.canvas
     ctx.clearRect(0, 0, width, height)
-    ctx.beginPath()
-    ctx.arc(width / 2, height / 2, 10, 0, Math.PI * 2)
-    ctx.fillStyle = 'red'
-    ctx.fill()
-  }, [])
+
+    // Cache image per URL
+    let img = imgCache.current.get(bgImage)
+    if (!img) {
+      img = new Image()
+      img.crossOrigin = 'anonymous'
+      img.src = bgImage
+      imgCache.current.set(bgImage, img)
+    }
+
+    // Cache font load promise
+    if (!fontReady.current) {
+      fontReady.current = document.fonts.load('800 1px "Barlow Condensed"')
+    }
+
+    const logo = imgCache.current.get('/Box_Logo_Black.png') ?? (() => {
+      const l = new Image()
+      l.src = '/Box_Logo_Black.png'
+      imgCache.current.set('/Box_Logo_Black.png', l)
+      return l
+    })()
+
+    const render = (loadedImg: HTMLImageElement) => {
+      ctx.drawImage(loadedImg, 0, 0, width, height)
+
+      const drawLogo = () => ctx.drawImage(logo, 70, 60, logo.naturalWidth * 0.3, logo.naturalHeight * 0.3)
+      if (logo.complete) drawLogo()
+      else logo.onload = drawLogo
+
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'alphabetic'
+      const cx = width / 2
+
+      ctx.font = '800 200px "Barlow Condensed"'
+      ctx.fillStyle = '#fff'
+      ctx.fillText('FIGHTSTICK', cx, height * 0.38)
+
+      ctx.font = '800 272px "Barlow Condensed"'
+      ctx.strokeStyle = '#fff'
+      ctx.lineWidth = 12
+      ctx.lineJoin = 'round'
+      ctx.strokeText('FRIDAY', cx, height * 0.50)
+
+      ctx.font = '800 96px "Barlow Condensed"'
+      ctx.fillStyle = '#fff'
+      ctx.fillText('WITH', cx, height * 0.56)
+
+      ctx.font = '800 200px "Barlow Condensed"'
+      ctx.fillText(host.toUpperCase(), cx, height * 0.67)
+
+      tripleArrow(ctx, {
+        color: "#ffffff",
+        gap: 4,
+        size: 80,
+        x: width - 320,
+        y: height - 160,
+      })
+    }
+
+    const proceed = (loadedImg: HTMLImageElement) =>
+      fontReady.current!.then(() => render(loadedImg))
+
+    if (img.complete) {
+      proceed(img)
+    } else {
+      img.onload = () => proceed(img!)
+    }
+  }, [bgImage, host])
 
   return (
-    <div className="flex h-full">
-      <aside className="w-64 shrink-0 bg-white h-full flex items-center justify-center">
-        <button
-          type="button"
-          className="px-4 py-2 bg-red-500 rounded hover:bg-blue-500"
-        >
-          Press me
-        </button>
-      </aside>
-      <main className="flex-1 flex items-center justify-center">
-        <div className="border border-gray-300 overflow-hidden" style={{ width: 360, height: 450 }}>
-          <DBoard width={360} height={450} draw={draw} />
-        </div>
-      </main>
+    <div className="flex h-full items-center justify-center">
+      <DBoard width={1440} height={1800} previewWidth={360} drawAction={draw} />
     </div>
   )
 }
