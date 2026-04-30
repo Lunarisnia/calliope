@@ -1,5 +1,9 @@
 'use client'
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useImperativeHandle, forwardRef } from 'react'
+
+export type DBoardHandle = {
+  toDataURL: () => string
+}
 
 type Props = {
   width: number
@@ -9,14 +13,17 @@ type Props = {
   className?: string
 }
 
-export default function DBoard({ width, height, previewWidth, drawAction, className }: Props) {
+const DBoard = forwardRef<DBoardHandle, Props>(function DBoard({ width, height, previewWidth, drawAction, className }, forwardedRef) {
   const ref = useRef<HTMLCanvasElement>(null)
+
+  useImperativeHandle(forwardedRef, () => ({
+    toDataURL: () => ref.current?.toDataURL('image/png') ?? '',
+  }))
 
   useEffect(() => {
     const ctx = ref.current?.getContext('2d')
     if (!ctx) return
     drawAction(ctx)
-    return () => { ref.current = null };
   }, [drawAction])
 
   const displayWidth = previewWidth ?? width
@@ -39,4 +46,6 @@ export default function DBoard({ width, height, previewWidth, drawAction, classN
       />
     </div>
   )
-}
+})
+
+export default DBoard
