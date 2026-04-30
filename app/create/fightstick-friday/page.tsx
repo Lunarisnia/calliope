@@ -1,71 +1,122 @@
 'use client'
 
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, forwardRef } from 'react'
 import dynamic from 'next/dynamic'
 import type { DBoardHandle } from '@/app/components/DBoard'
 import { tripleArrow } from '@/app/components/DBoard/drawing-actions/triple-arrow'
 
 const DBoard = dynamic(() => import('@/app/components/DBoard'), { ssr: false })
 
-export default function FightstickFriday() {
-  const [bgImage, setBgImage] = useState('/W1.png')
-  const [controllerImages, setControllerImages] = useState<string[]>([])
-  const [hostInput, setHostInput] = useState('Louna')
-  const [host, setHost] = useState('Louna')
-  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+function loadImg(img: HTMLImageElement): Promise<HTMLImageElement> {
+  return img.complete ? Promise.resolve(img) : new Promise(res => { img.onload = () => res(img) })
+}
 
-  function onHostChange(value: string) {
-    setHostInput(value)
-    if (debounceTimer.current) clearTimeout(debounceTimer.current)
-    debounceTimer.current = setTimeout(() => setHost(value), 300)
-  }
-
-  // TODO: I can abstract out the creation of canvas
-  // TODO: I can create a button to spawn a new canvas
-  // TODO: Multi canvas scrolls horizontally
-  // TODO: I can focus on a canvas and it would show the state of that page
-  // TODO: Multi canvas in a single page
-
-  const boardRef = useRef<DBoardHandle>(null)
-  const imgCache = useRef<Map<string, HTMLImageElement>>(new Map())
-  const fontReady = useRef<Promise<FontFace[]> | null>(null)
-
-  function saveAsImage() {
-    const url = boardRef.current?.toDataURL()
-    if (!url) return
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `fightstick-friday-${host.toLowerCase()}-0.png`
-    a.click()
-  }
-
-  const draw = useCallback((ctx: CanvasRenderingContext2D) => {
+function makeControllerDraw(
+  bgImage: string,
+  controllerImage: string,
+  imgCache: Map<string, HTMLImageElement>,
+  fontReady: { current: Promise<FontFace[]> | null },
+) {
+  return (ctx: CanvasRenderingContext2D) => {
     const { width, height } = ctx.canvas
     ctx.clearRect(0, 0, width, height)
 
-    // Cache image per URL
-    let img = imgCache.current.get(bgImage)
-    if (!img) {
-      img = new Image()
-      img.crossOrigin = 'anonymous'
-      img.src = bgImage
-      imgCache.current.set(bgImage, img)
+    const getCached = (src: string, crossOrigin = false) => {
+      let img = imgCache.get(src)
+      if (!img) {
+        img = new Image()
+        if (crossOrigin) img.crossOrigin = 'anonymous'
+        img.src = src
+        imgCache.set(src, img)
+      }
+      return img
     }
 
-    // Cache font load promise
+    const bg = getCached(bgImage, true)
+    const logo = getCached('/Box_Logo_Black.png')
+    const controller = getCached(controllerImage)
+
     if (!fontReady.current) {
       fontReady.current = document.fonts.load('800 1px "Barlow Condensed"')
     }
 
-    const logo = imgCache.current.get('/Box_Logo_Black.png') ?? (() => {
-      const l = new Image()
-      l.src = '/Box_Logo_Black.png'
-      imgCache.current.set('/Box_Logo_Black.png', l)
-      return l
-    })()
+    Promise.all([loadImg(bg), loadImg(controller), fontReady.current]).then(([loadedBg, loadedController]) => {
+      // Blurred background — overdraw edges to hide blur fringe
+      const bleed = 40
+      ctx.filter = 'blur(20px)'
+      ctx.drawImage(loadedBg, -bleed, -bleed, width + bleed * 2, height + bleed * 2)
+      ctx.filter = 'none'
 
-    const render = (loadedImg: HTMLImageElement) => {
-      ctx.drawImage(loadedImg, 0, 0, width, height)
+      // Controller image centered
+      const maxW = width * 0.8
+      const maxH = height * 0.6
+      const scale = Math.min(maxW / loadedController.naturalWidth, maxH / loadedController.naturalHeight)
+      const cw = loadedController.naturalWidth * scale
+      const ch = loadedController.naturalHeight * scale
+      const cx = (width - cw) / 2
+      const cy = (height - ch) / 2
+      ctx.drawImage(loadedController, cx, cy, cw, ch)
+
+      ctx.strokeStyle = '#fff'
+      ctx.lineWidth = 8
+      ctx.strokeRect(cx, cy, cw, ch)
+
+      // "Via +CREW Exclusive" — top right of image
+      ctx.font = '800 36px "Barlow Condensed"'
+      ctx.fillStyle = '#fff'
+      ctx.textAlign = 'right'
+      ctx.textBaseline = 'bottom'
+      ctx.fillText('Via +CREW Exclusive', cx + cw, cy - 16)
+
+      // Logo (unblurred)
+      const drawLogo = () => ctx.drawImage(logo, 70, 60, logo.naturalWidth * 0.3, logo.naturalHeight * 0.3)
+      if (logo.complete) drawLogo()
+      else logo.onload = drawLogo
+
+      // Bottom-left text aligned with chevron
+      ctx.textAlign = 'left'
+      ctx.textBaseline = 'top'
+      ctx.fillStyle = '#fff'
+      ctx.font = '800 80px "Barlow Condensed"'
+      ctx.fillText('FIGHTSTICK', 60, height - 180)
+      ctx.fillText('FRIDAY', 60, height - 100)
+
+      // Triple arrow (unblurred)
+      tripleArrow(ctx, { color: '#ffffff', gap: 4, size: 80, x: width - 320, y: height - 160 })
+    })
+  }
+}
+
+function makeDraw(
+  bgImage: string,
+  host: string,
+  imgCache: Map<string, HTMLImageElement>,
+  fontReady: { current: Promise<FontFace[]> | null }
+) {
+  return (ctx: CanvasRenderingContext2D) => {
+    const { width, height } = ctx.canvas
+    ctx.clearRect(0, 0, width, height)
+
+    const getCached = (src: string, crossOrigin = false) => {
+      let img = imgCache.get(src)
+      if (!img) {
+        img = new Image()
+        if (crossOrigin) img.crossOrigin = 'anonymous'
+        img.src = src
+        imgCache.set(src, img)
+      }
+      return img
+    }
+
+    const bg = getCached(bgImage, true)
+    const logo = getCached('/Box_Logo_Black.png')
+
+    if (!fontReady.current) {
+      fontReady.current = document.fonts.load('800 1px "Barlow Condensed"')
+    }
+
+    const render = (loadedBg: HTMLImageElement) => {
+      ctx.drawImage(loadedBg, 0, 0, width, height)
 
       const drawLogo = () => ctx.drawImage(logo, 70, 60, logo.naturalWidth * 0.3, logo.naturalHeight * 0.3)
       if (logo.complete) drawLogo()
@@ -95,27 +146,69 @@ export default function FightstickFriday() {
         hostSize--
         ctx.font = `800 ${hostSize}px "Barlow Condensed"`
       }
-      const hostY = height * 0.67 - (200 - hostSize) / 2
-      ctx.fillText(host.toUpperCase(), cx, hostY)
+      ctx.fillText(host.toUpperCase(), cx, height * 0.67 - (200 - hostSize) / 2)
 
-      tripleArrow(ctx, {
-        color: "#ffffff",
-        gap: 4,
-        size: 80,
-        x: width - 320,
-        y: height - 160,
-      })
+      tripleArrow(ctx, { color: '#ffffff', gap: 4, size: 80, x: width - 320, y: height - 160 })
     }
 
-    const proceed = (loadedImg: HTMLImageElement) =>
-      fontReady.current!.then(() => render(loadedImg))
+    const proceed = (loadedBg: HTMLImageElement) =>
+      fontReady.current!.then(() => render(loadedBg))
 
-    if (img.complete) {
-      proceed(img)
-    } else {
-      img.onload = () => proceed(img!)
-    }
-  }, [bgImage, host])
+    if (bg.complete) proceed(bg)
+    else bg.onload = () => proceed(bg)
+  }
+}
+
+const BoardItem = forwardRef<DBoardHandle, {
+  bgImage: string
+  host: string
+  controllerImage: string | null
+  imgCache: Map<string, HTMLImageElement>
+  fontReady: { current: Promise<FontFace[]> | null }
+}>(function BoardItem({ bgImage, host, controllerImage, imgCache, fontReady }, ref) {
+  const draw = useCallback(
+    controllerImage
+      ? makeControllerDraw(bgImage, controllerImage, imgCache, fontReady)
+      : makeDraw(bgImage, host, imgCache, fontReady),
+    [bgImage, host, controllerImage]
+  )
+  return <DBoard ref={ref} width={1440} height={1800} previewWidth={360} drawAction={draw} />
+})
+
+export default function FightstickFriday() {
+  const [bgImage] = useState('/W1.png')
+  const [controllerImages, setControllerImages] = useState<string[]>([])
+  const [generatedImages, setGeneratedImages] = useState<(string | null)[]>([])
+  const [hostInput, setHostInput] = useState('Louna')
+  const [host, setHost] = useState('Louna')
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const boardRef = useRef<DBoardHandle>(null)
+  const boardRefs = useRef<(DBoardHandle | null)[]>([])
+  const imgCache = useRef(new Map<string, HTMLImageElement>())
+  const fontReady = useRef<Promise<FontFace[]> | null>(null)
+
+  function onHostChange(value: string) {
+    setHostInput(value)
+    if (debounceTimer.current) clearTimeout(debounceTimer.current)
+    debounceTimer.current = setTimeout(() => setHost(value), 300)
+  }
+
+  function saveAsImage() {
+    const refs = generatedImages.length > 0 ? boardRefs.current : [boardRef.current]
+    refs.forEach((ref, i) => {
+      const url = ref?.toDataURL()
+      if (!url) return
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `fightstick-friday-${host.toLowerCase()}-${i}.png`
+      a.click()
+    })
+  }
+
+  const draw = useCallback(
+    makeDraw(bgImage, host, imgCache.current, fontReady),
+    [bgImage, host]
+  )
 
   return (
     <div className="flex h-full">
@@ -145,12 +238,15 @@ export default function FightstickFriday() {
             }}
           />
           {controllerImages.length > 0 && (
-            <span className="text-xs text-gray-400">{controllerImages.length} image{controllerImages.length > 1 ? 's' : ''} selected</span>
+            <span className="text-xs text-gray-400">
+              {controllerImages.length} image{controllerImages.length > 1 ? 's' : ''} selected
+            </span>
           )}
         </label>
         <button
           type="button"
           className="border border-gray-300 rounded px-3 py-2 text-sm text-black hover:bg-gray-50 cursor-pointer active:bg-black active:text-white active:border-black"
+          onClick={() => setGeneratedImages([null, ...controllerImages])}
         >
           Generate
         </button>
@@ -162,8 +258,22 @@ export default function FightstickFriday() {
           Save as image
         </button>
       </aside>
-      <main className="flex-1 flex items-center justify-center">
-        <DBoard ref={boardRef} width={1440} height={1800} previewWidth={360} drawAction={draw} />
+      <main className="flex-1 flex items-center overflow-x-auto gap-4 px-4">
+        {generatedImages.length > 0 ? (
+          generatedImages.map((img, i) => (
+            <BoardItem
+              key={img ?? 'title'}
+              ref={(el) => { boardRefs.current[i] = el }}
+              bgImage={bgImage}
+              host={host}
+              controllerImage={img}
+              imgCache={imgCache.current}
+              fontReady={fontReady}
+            />
+          ))
+        ) : (
+          <DBoard ref={boardRef} width={1440} height={1800} previewWidth={360} drawAction={draw} />
+        )}
       </main>
     </div>
   )
