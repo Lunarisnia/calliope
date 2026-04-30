@@ -256,18 +256,15 @@ export default function FightstickFriday() {
             onChange={(e) => {
               const files = Array.from(e.target.files ?? [])
               const urls = files.map((f) => {
+                const url = URL.createObjectURL(f);
                 return {
+                  id: url,
                   filename: f.name,
-                  url: URL.createObjectURL(f),
+                  url: url,
                 } as IUploadedImage
               })
               if (fileInputRef.current) fileInputRef.current.value = ''
-              setControllerImages((prev) => {
-                prev.forEach((image) => {
-                  URL.revokeObjectURL(image.url)
-                })
-                return urls
-              })
+              setControllerImages((prev) => [...prev, ...urls])
             }}
           />
           {controllerImages.length > 0 && (
@@ -279,10 +276,10 @@ export default function FightstickFriday() {
         {controllerImages.map((image) => {
           const remove = () => {
             URL.revokeObjectURL(image.url)
-            setControllerImages((prev) => prev.filter((i) => i.filename !== image.filename))
-            setGeneratedImages((prev) => prev.filter((i) => i?.filename !== image.filename))
+            setControllerImages((prev) => prev.filter((i) => i.id !== image.id))
+            setGeneratedImages((prev) => prev.filter((i) => i?.id !== image.id))
           }
-          return <UploadedImage image={image} key={image.filename} onRemove={remove} />
+          return <UploadedImage image={image} key={image.id} onRemove={remove} />
         })}
         <button
           type="button"
