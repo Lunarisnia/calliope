@@ -12,11 +12,20 @@ function loadImg(img: HTMLImageElement): Promise<HTMLImageElement> {
   return img.complete ? Promise.resolve(img) : new Promise(res => { img.onload = () => res(img) })
 }
 
+async function loadFonts(): Promise<void> {
+  const regular = new FontFace('Horizon', 'url(/Horizon_Regular.otf)')
+  const outlined = new FontFace('Horizon Outlined', 'url(/Horizon_Outlined.otf)')
+  return Promise.all([regular.load(), outlined.load()]).then(([r, o]) => {
+    document.fonts.add(r)
+    document.fonts.add(o)
+  })
+}
+
 function makeControllerDraw(
   bgImage: string,
   controllerImage: string,
   imgCache: Map<string, HTMLImageElement>,
-  fontReady: { current: Promise<FontFace[]> | null },
+  fontReady: { current: Promise<void> | null },
 ) {
   return (ctx: CanvasRenderingContext2D) => {
     const { width, height } = ctx.canvas
@@ -38,7 +47,7 @@ function makeControllerDraw(
     const controller = getCached(controllerImage)
 
     if (!fontReady.current) {
-      fontReady.current = document.fonts.load('800 1px "Barlow Condensed"')
+      fontReady.current = loadFonts()
     }
 
     Promise.all([loadImg(bg), loadImg(controller), fontReady.current]).then(([loadedBg, loadedController]) => {
@@ -63,7 +72,7 @@ function makeControllerDraw(
       ctx.strokeRect(cx, cy, cw, ch)
 
       // "Via +CREW Exclusive" — top right of image
-      ctx.font = '800 36px "Barlow Condensed"'
+      ctx.font = '36px "Horizon"'
       ctx.fillStyle = '#fff'
       ctx.textAlign = 'right'
       ctx.textBaseline = 'bottom'
@@ -77,10 +86,15 @@ function makeControllerDraw(
       // Bottom-left text aligned with chevron
       ctx.textAlign = 'left'
       ctx.textBaseline = 'top'
+      ctx.font = '40px "Horizon"'
+      ctx.strokeStyle = '#000'
+      ctx.lineWidth = 6
+      ctx.lineJoin = 'round'
+      ctx.strokeText('FIGHTSTICK', 60, height - 180)
+      ctx.strokeText('FRIDAY', 60, height - 140)
       ctx.fillStyle = '#fff'
-      ctx.font = '800 80px "Barlow Condensed"'
       ctx.fillText('FIGHTSTICK', 60, height - 180)
-      ctx.fillText('FRIDAY', 60, height - 100)
+      ctx.fillText('FRIDAY', 60, height - 140)
 
       // Triple arrow (unblurred)
       tripleArrow(ctx, { color: '#ffffff', gap: 4, size: 80, x: width - 320, y: height - 160 })
@@ -92,7 +106,7 @@ function makeDraw(
   bgImage: string,
   host: string,
   imgCache: Map<string, HTMLImageElement>,
-  fontReady: { current: Promise<FontFace[]> | null }
+  fontReady: { current: Promise<void> | null }
 ) {
   return (ctx: CanvasRenderingContext2D) => {
     const { width, height } = ctx.canvas
@@ -113,7 +127,7 @@ function makeDraw(
     const logo = getCached('/Box_Logo_Black.png')
 
     if (!fontReady.current) {
-      fontReady.current = document.fonts.load('800 1px "Barlow Condensed"')
+      fontReady.current = loadFonts()
     }
 
     const render = (loadedBg: HTMLImageElement) => {
@@ -127,27 +141,27 @@ function makeDraw(
       ctx.textBaseline = 'alphabetic'
       const cx = width / 2
 
-      ctx.font = '800 200px "Barlow Condensed"'
+      ctx.font = '120px "Horizon"'
       ctx.fillStyle = '#fff'
-      ctx.fillText('FIGHTSTICK', cx, height * 0.38)
+      ctx.fillText('FIGHTSTICK', cx, height * 0.41)
 
-      ctx.font = '800 272px "Barlow Condensed"'
+      ctx.font = '200px "Horizon"'
       ctx.strokeStyle = '#fff'
-      ctx.lineWidth = 12
+      ctx.lineWidth = 8
       ctx.lineJoin = 'round'
       ctx.strokeText('FRIDAY', cx, height * 0.50)
 
-      ctx.font = '800 96px "Barlow Condensed"'
+      ctx.font = '96px "Horizon"'
       ctx.fillStyle = '#fff'
       ctx.fillText('WITH', cx, height * 0.56)
 
-      let hostSize = 200
-      ctx.font = `800 ${hostSize}px "Barlow Condensed"`
+      let hostSize = 140
+      ctx.font = `${hostSize}px "Horizon"`
       while (ctx.measureText(host.toUpperCase()).width > width * 0.8 && hostSize > 1) {
         hostSize--
-        ctx.font = `800 ${hostSize}px "Barlow Condensed"`
+        ctx.font = `${hostSize}px "Horizon"`
       }
-      ctx.fillText(host.toUpperCase(), cx, height * 0.67 - (200 - hostSize) / 2)
+      ctx.fillText(host.toUpperCase(), cx, height * 0.64 - (200 - hostSize) / 2)
 
       tripleArrow(ctx, { color: '#ffffff', gap: 4, size: 80, x: width - 320, y: height - 160 })
     }
@@ -165,7 +179,7 @@ const BoardItem = forwardRef<DBoardHandle, {
   host: string
   controllerImage: string | null
   imgCache: Map<string, HTMLImageElement>
-  fontReady: { current: Promise<FontFace[]> | null }
+  fontReady: { current: Promise<void> | null }
 }>(function BoardItem({ bgImage, host, controllerImage, imgCache, fontReady }, ref) {
   const draw = useCallback(
     controllerImage
@@ -195,7 +209,7 @@ export default function FightstickFriday() {
   const boardRef = useRef<DBoardHandle>(null)
   const boardRefs = useRef<(DBoardHandle | null)[]>([])
   const imgCache = useRef(new Map<string, HTMLImageElement>())
-  const fontReady = useRef<Promise<FontFace[]> | null>(null)
+  const fontReady = useRef<Promise<void> | null>(null)
 
   function onHostChange(value: string) {
     setHostInput(value)
