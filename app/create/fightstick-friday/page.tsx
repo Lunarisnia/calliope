@@ -72,8 +72,13 @@ function makeControllerDraw(
       ctx.lineWidth = 8
       ctx.strokeRect(cx, cy, cw, ch)
 
-      // "Via +CREW Exclusive" — top right of image
-      ctx.font = '36px "Horizon"'
+      // "Via +CREW Exclusive" — top right of image, scaled to fit controller width
+      let viaSize = 36
+      ctx.font = `${viaSize}px "Horizon"`
+      while (ctx.measureText('Via +CREW Exclusive').width > cw && viaSize > 1) {
+        viaSize--
+        ctx.font = `${viaSize}px "Horizon"`
+      }
       ctx.fillStyle = '#fff'
       ctx.textAlign = 'right'
       ctx.textBaseline = 'bottom'
