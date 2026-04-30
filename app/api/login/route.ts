@@ -15,7 +15,16 @@ export async function POST(req: NextRequest) {
   const token = await new SignJWT({ email })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
+    .setExpirationTime('7d')
     .sign(secret)
 
-  return NextResponse.json({ token })
+  const res = NextResponse.json({ ok: true })
+  res.cookies.set('session', token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 60 * 60 * 24 * 7,
+  })
+  return res
 }

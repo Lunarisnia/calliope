@@ -28,47 +28,44 @@ export default function LoginPage() {
       return
     }
 
-    const { token } = await res.json()
-    localStorage.setItem('token', token)
     router.push('/')
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-white">
+    <div className="min-h-screen flex items-center justify-center bg-black">
       <form
         onSubmit={handleSubmit}
-        className="flex flex-col gap-4 w-full max-w-sm border border-gray-200 rounded p-8"
+        className="flex flex-col gap-0 w-full max-w-sm"
       >
-        <h1 className="text-lg font-semibold text-black">Sign in</h1>
+        <h1 className="text-4xl font-black uppercase text-[#ff2255] tracking-tight leading-none mb-8">
+          Sign In
+        </h1>
 
-        <label className="flex flex-col gap-1 text-sm text-black">
-          Email
-          <input
-            type="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="border border-gray-300 rounded px-2 py-1 text-sm"
-          />
-        </label>
+        <input
+          type="email"
+          required
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className="bg-black text-[#ff2255] placeholder-[#ff225566] border-2 border-[#ff2255] px-4 py-3 text-sm font-medium outline-none w-full [&:-webkit-autofill]:![box-shadow:0_0_0_1000px_black_inset] [&:-webkit-autofill]:![-webkit-text-fill-color:#ff2255]"
+        />
+        <input
+          type="password"
+          required
+          placeholder="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          className="bg-black text-[#ff2255] placeholder-[#ff225566] border-2 border-t-0 border-[#ff2255] px-4 py-3 text-sm font-medium outline-none w-full [&:-webkit-autofill]:![box-shadow:0_0_0_1000px_black_inset] [&:-webkit-autofill]:![-webkit-text-fill-color:#ff2255]"
+        />
 
-        <label className="flex flex-col gap-1 text-sm text-black">
-          Password
-          <input
-            type="password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="border border-gray-300 rounded px-2 py-1 text-sm"
-          />
-        </label>
-
-        {error && <p className="text-sm text-red-500">{error}</p>}
+        {error && (
+          <p className="text-[#ff2255] text-xs font-bold uppercase mt-3">{error}</p>
+        )}
 
         <button
           type="submit"
           disabled={loading}
-          className="border border-gray-300 rounded px-3 py-2 text-sm text-black hover:bg-gray-50 cursor-pointer active:bg-black active:text-white active:border-black disabled:opacity-50"
+          className="mt-6 border-2 border-[#ff2255] text-[#ff2255] font-black uppercase text-sm px-4 py-3 hover:bg-[#ff2255] hover:text-black transition-colors cursor-pointer disabled:opacity-40"
         >
           {loading ? 'Signing in…' : 'Sign in'}
         </button>
