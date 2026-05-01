@@ -4,7 +4,8 @@ import { useState, useCallback, useRef, forwardRef } from 'react'
 import dynamic from 'next/dynamic'
 import type { DBoardHandle } from '@/app/components/DBoard'
 import { tripleArrow } from '@/app/components/DBoard/drawing-actions/triple-arrow'
-import { IUploadedImage } from './types/controller-images'
+import { IUploadedImage } from '@/app/types/upload'
+import MultiImageUpload from '@/app/components/MultiImageUpload'
 
 const DBoard = dynamic(() => import('@/app/components/DBoard'), { ssr: false })
 
@@ -202,22 +203,14 @@ const BoardItem = forwardRef<DBoardHandle, {
   return <DBoard ref={ref} width={1440} height={1800} previewWidth={360} drawAction={draw} />
 })
 
-const UploadedImage = ({ image, onRemove }: { image: IUploadedImage; onRemove: () => void }) => {
-  return <div className='border-2 border-[#ff2255] overflow-hidden text-[#ff2255] flex items-center shrink-0'>
-    <p className='flex-1 px-2 py-1 text-xs truncate'>{image.filename}</p>
-    <button onClick={onRemove} className='shrink-0 border-l-2 border-[#ff2255] px-2 py-1 text-xs hover:bg-[#ff2255] hover:text-black cursor-pointer'>✕</button>
-  </div>
-}
 
 export default function FightstickFriday() {
   const [bgImage, setBgImage] = useState('/W1.png')
   const bgInputRef = useRef<HTMLInputElement>(null)
-  const [controllerImages, setControllerImages] = useState<IUploadedImage[]>([])
   const [generatedImages, setGeneratedImages] = useState<(IUploadedImage | null)[]>([])
   const [host, setHost] = useState('Louna')
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
-  const fileInputRef = useRef<HTMLInputElement>(null)
   const boardRef = useRef<DBoardHandle>(null)
   const boardRefs = useRef<(DBoardHandle | null)[]>([])
   const imgCache = useRef(new Map<string, HTMLImageElement>())
@@ -305,41 +298,12 @@ export default function FightstickFriday() {
             onChange={(e) => setHost(e.target.value)}
           />
         </label>
-        <label className="flex flex-col gap-1 text-xs font-bold uppercase text-[#ff2255]">
-          Controller images
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            multiple
-            className="relative text-xs text-[#ff2255] border-2 border-[#ff2255] px-2 py-1 cursor-pointer w-full bg-black file:bg-[#ff2255] file:text-black file:border-0 file:text-xs file:font-bold file:uppercase file:cursor-pointer file:mr-2 file:px-2"
-            onChange={(e) => {
-              const files = Array.from(e.target.files ?? [])
-              const urls = files.map((f) => {
-                const url = URL.createObjectURL(f);
-                return {
-                  id: url,
-                  filename: f.name,
-                  url: url,
-                } as IUploadedImage
-              })
-              if (fileInputRef.current) fileInputRef.current.value = ''
-              setControllerImages((prev) => {
-                const next = [...prev, ...urls]
-                setGeneratedImages([null, ...next])
-                return next
-              })
-            }}
-          />
-        </label>
-        {controllerImages.map((image) => {
-          const remove = () => {
-            URL.revokeObjectURL(image.url)
-            setControllerImages((prev) => prev.filter((i) => i.id !== image.id))
-            setGeneratedImages((prev) => prev.filter((i) => i?.id !== image.id))
-          }
-          return <UploadedImage image={image} key={image.id} onRemove={remove} />
-        })}
+        <MultiImageUpload
+          label="Controller images"
+          onChange={(imgs) => {
+            setGeneratedImages([null, ...imgs])
+          }}
+        />
         <button
           type="button"
           className="mt-auto border-2 border-[#ff2255] px-3 py-2 text-xs font-bold uppercase text-[#ff2255] hover:bg-[#ff2255] hover:text-black transition-colors cursor-pointer"
