@@ -16,7 +16,6 @@ function makeControllerDraw(
   controllerImage: string,
   imgCache: Map<string, HTMLImageElement>,
   fontReady: { current: Promise<void> | null },
-  showArrow: boolean,
 ) {
   return (ctx: CanvasRenderingContext2D) => {
     const { width, height } = ctx.canvas
@@ -99,7 +98,7 @@ function makeControllerDraw(
       ctx.fillText('FRIDAY', textX, textY2)
 
       // Triple arrow (unblurred)
-      if (showArrow) tripleArrow(ctx, { color: '#ffffff', gap: 4, size: 42, x: width - 320, y: height - 160 })
+      tripleArrow(ctx, { color: '#ffffff', gap: 4, size: 80, x: width - 320, y: height - 160 })
     })
   }
 }
@@ -165,7 +164,7 @@ function makeDraw(
       }
       ctx.fillText(host.toUpperCase(), cx, height * 0.64 - (200 - hostSize) / 2)
 
-      tripleArrow(ctx, { color: '#ffffff', gap: 4, size: 42, x: width - 320, y: height - 160 })
+      tripleArrow(ctx, { color: '#ffffff', gap: 4, size: 80, x: width - 320, y: height - 160 })
     }
 
     const proceed = (loadedBg: HTMLImageElement) =>
@@ -182,11 +181,10 @@ const BoardItem = forwardRef<DBoardHandle, {
   controllerImage: string | null
   imgCache: Map<string, HTMLImageElement>
   fontReady: { current: Promise<void> | null }
-  showArrow: boolean
-}>(function BoardItem({ bgImage, host, controllerImage, imgCache, fontReady, showArrow }, ref) {
+}>(function BoardItem({ bgImage, host, controllerImage, imgCache, fontReady }, ref) {
   const draw = useCallback(
     controllerImage
-      ? makeControllerDraw(bgImage, controllerImage, imgCache, fontReady, showArrow)
+      ? makeControllerDraw(bgImage, controllerImage, imgCache, fontReady)
       : makeDraw(bgImage, host, imgCache, fontReady),
     [bgImage, host, controllerImage]
   )
@@ -194,7 +192,7 @@ const BoardItem = forwardRef<DBoardHandle, {
 })
 
 
-export default function FightstickFriday() {
+export default function KnockoutRecap() {
   const [bgImage, setBgImage] = useState('/W1.png')
   const bgInputRef = useRef<HTMLInputElement>(null)
   const [generatedImages, setGeneratedImages] = useState<(IUploadedImage | null)[]>([])
@@ -313,7 +311,6 @@ export default function FightstickFriday() {
               controllerImage={img?.url || null}
               imgCache={imgCache.current}
               fontReady={fontReady}
-              showArrow={i < generatedImages.length - 1}
             />
           ))
         ) : (

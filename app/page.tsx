@@ -2,6 +2,7 @@ import Link from 'next/link'
 
 const tools = [
   { name: 'Fightstick Friday Generator', href: '/create/fightstick-friday' },
+  { name: 'Knockout Recap Generator', href: '/create/knockout-recap' },
 ]
 
 export default function Home() {
@@ -15,7 +16,7 @@ export default function Home() {
           <li key={tool.href}>
             <Link
               href={tool.href}
-              className="block border-2 border-[#ff2255] px-4 py-3 text-sm font-bold uppercase text-[#ff2255] hover:bg-[#ff2255] hover:text-black transition-colors"
+              className="block border-2 border-[#ff2255] px-4 py-3 text-sm font-bold uppercase text-[#ff2255] hover:bg-[#ff2255] hover:text-black transition-colors my-1"
             >
               {tool.name}
             </Link>
