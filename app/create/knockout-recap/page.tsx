@@ -98,14 +98,14 @@ function makeControllerDraw(
       ctx.fillText('FRIDAY', textX, textY2)
 
       // Triple arrow (unblurred)
-      tripleArrow(ctx, { color: '#ffffff', gap: 4, size: 80, x: width - 320, y: height - 160 })
+      tripleArrow(ctx, { color: '#ffffff', gap: 4, size: 42, x: width - 320, y: height - 160 })
     })
   }
 }
 
 function makeDraw(
   bgImage: string,
-  host: string,
+  title: string,
   imgCache: Map<string, HTMLImageElement>,
   fontReady: { current: Promise<void> | null }
 ) {
@@ -138,33 +138,77 @@ function makeDraw(
       if (logo.complete) drawLogo()
       else logo.addEventListener('load', drawLogo, { once: true })
 
-      ctx.textAlign = 'center'
-      ctx.textBaseline = 'alphabetic'
-      const cx = width / 2
+      const lines = title.split('\n').map(l => l.trim().toUpperCase()).filter(Boolean)
+      if (lines.length === 0) return
 
-      ctx.font = '121px "Horizon"'
-      ctx.fillStyle = '#fff'
-      ctx.fillText('FIGHTSTICK', cx, height * 0.41)
-
-      ctx.font = '200px "Horizon"'
-      ctx.strokeStyle = '#fff'
-      ctx.lineWidth = 8
-      ctx.lineJoin = 'round'
-      ctx.strokeText('FRIDAY', cx, height * 0.50)
-
-      ctx.font = '96px "Horizon"'
-      ctx.fillStyle = '#fff'
-      ctx.fillText('WITH', cx, height * 0.56)
-
-      let hostSize = 140
-      ctx.font = `${hostSize}px "Horizon"`
-      while (ctx.measureText(host.toUpperCase()).width > width * 0.8 && hostSize > 1) {
-        hostSize--
-        ctx.font = `${hostSize}px "Horizon"`
+      // Auto-size font to fit within ~55% canvas width
+      const maxLineW = width * 0.55
+      let fontSize = 160
+      ctx.font = `${fontSize}px "Horizon"`
+      const longestLine = lines.reduce((a, b) =>
+        ctx.measureText(a).width >= ctx.measureText(b).width ? a : b
+      )
+      while (ctx.measureText(longestLine).width > maxLineW && fontSize > 40) {
+        fontSize--
+        ctx.font = `${fontSize}px "Horizon"`
       }
-      ctx.fillText(host.toUpperCase(), cx, height * 0.64 - (200 - hostSize) / 2)
 
-      tripleArrow(ctx, { color: '#ffffff', gap: 4, size: 80, x: width - 320, y: height - 160 })
+      const lineHeight = fontSize * 1.5
+      const recapSize = Math.round(fontSize * 0.85)
+      const padX = 80
+      const padY = 60
+
+      ctx.font = `${fontSize}px "Horizon"`
+      const lineWidths = lines.map(l => ctx.measureText(l).width)
+      const textBlockW = Math.max(...lineWidths)
+      const titleBlockH = lines.length * lineHeight
+
+      ctx.font = `${recapSize}px "Horizon"`
+      const recapW = ctx.measureText('RECAP').width
+
+      const contentH = titleBlockH + recapSize * 1.5
+
+      const blockH = contentH + padY * 2
+      const cx = width / 2
+      const blockY = (height - blockH) / 2
+
+      const shadow = 14  // red offset shift
+
+      // Per-line dark rect + title text (centered)
+      ctx.font = `${fontSize}px "Horizon"`
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'top'
+      lines.forEach((line, i) => {
+        const lw = lineWidths[i]
+        const rx = cx - lw / 2 - padX
+        const ry = blockY + padY + i * lineHeight - padY / 2
+        const rw = lw + padX * 2
+        const rh = lineHeight + padY / 2
+        ctx.fillStyle = '#ff2255'
+        ctx.fillRect(rx + shadow, ry + shadow, rw, rh)
+        ctx.fillStyle = 'rgba(15, 15, 15, 0.92)'
+        ctx.fillRect(rx, ry, rw, rh)
+        ctx.fillStyle = '#ffffff'
+        ctx.fillText(line, cx, blockY + padY + i * lineHeight)
+      })
+
+      // RECAP rect + text (centered)
+      const recapY = blockY + padY + titleBlockH + recapSize * 0.3
+      const recapRx = cx - recapW / 2 - padX
+      const recapRy = recapY - padY / 2
+      const recapRw = recapW + padX * 2
+      const recapRh = recapSize * 1.4
+      ctx.fillStyle = '#ff2255'
+      ctx.fillRect(recapRx + shadow, recapRy + shadow, recapRw, recapRh)
+      ctx.fillStyle = 'rgba(15, 15, 15, 0.92)'
+      ctx.fillRect(recapRx, recapRy, recapRw, recapRh)
+      ctx.font = `${recapSize}px "Horizon"`
+      ctx.fillStyle = '#ff2255'
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'top'
+      ctx.fillText('RECAP', cx, recapY)
+
+      tripleArrow(ctx, { color: '#ffffff', gap: 4, size: 42, x: width - 320, y: height - 160 })
     }
 
     const proceed = (loadedBg: HTMLImageElement) =>
@@ -177,26 +221,25 @@ function makeDraw(
 
 const BoardItem = forwardRef<DBoardHandle, {
   bgImage: string
-  host: string
+  title: string
   controllerImage: string | null
   imgCache: Map<string, HTMLImageElement>
   fontReady: { current: Promise<void> | null }
-}>(function BoardItem({ bgImage, host, controllerImage, imgCache, fontReady }, ref) {
+}>(function BoardItem({ bgImage, title, controllerImage, imgCache, fontReady }, ref) {
   const draw = useCallback(
     controllerImage
       ? makeControllerDraw(bgImage, controllerImage, imgCache, fontReady)
-      : makeDraw(bgImage, host, imgCache, fontReady),
-    [bgImage, host, controllerImage]
+      : makeDraw(bgImage, title, imgCache, fontReady),
+    [bgImage, title, controllerImage]
   )
   return <DBoard ref={ref} width={1440} height={1800} previewWidth={360} drawAction={draw} />
 })
 
 
 export default function KnockoutRecap() {
-  const [bgImage, setBgImage] = useState('/W1.png')
-  const bgInputRef = useRef<HTMLInputElement>(null)
+  const [bgImage] = useState('/ko-report.png')
   const [generatedImages, setGeneratedImages] = useState<(IUploadedImage | null)[]>([])
-  const [host, setHost] = useState('Louna')
+  const [title, setTitle] = useState('TOURNAMENT\nRECAP')
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   const boardRef = useRef<DBoardHandle>(null)
@@ -211,14 +254,14 @@ export default function KnockoutRecap() {
       if (!url) return
       const a = document.createElement('a')
       a.href = url
-      a.download = `fightstick-friday-${host.toLowerCase()}-${i}.png`
+      a.download = `knockout-recap-${i}.png`
       a.click()
     })
   }
 
   const draw = useCallback(
-    makeDraw(bgImage, host, imgCache.current, fontReady),
-    [bgImage, host]
+    makeDraw(bgImage, title, imgCache.current, fontReady),
+    [bgImage, title]
   )
 
   return (
@@ -247,43 +290,12 @@ export default function KnockoutRecap() {
         md:relative md:translate-x-0 md:shrink-0 md:min-h-0
       `}>
         <label className="flex flex-col gap-1 text-xs font-bold uppercase text-[#ff2255]">
-          Background image
-          <input
-            ref={bgInputRef}
-            type="file"
-            accept="image/*"
-            className="relative text-xs text-[#ff2255] border-2 border-[#ff2255] px-2 py-1 cursor-pointer w-full bg-black file:bg-[#ff2255] file:text-black file:border-0 file:text-xs file:font-bold file:uppercase file:cursor-pointer file:mr-2 file:px-2"
-            onChange={(e) => {
-              const file = e.target.files?.[0]
-              if (!file) return
-              const prev = bgImage
-              const url = URL.createObjectURL(file)
-              if (prev !== '/W1.png') URL.revokeObjectURL(prev)
-              imgCache.current.delete(prev)
-              setBgImage(url)
-            }}
-          />
-          {bgImage !== '/W1.png' && (
-            <button
-              type="button"
-              className="text-xs text-[#ff225566] hover:text-[#ff2255] text-left cursor-pointer uppercase font-bold"
-              onClick={() => {
-                URL.revokeObjectURL(bgImage)
-                imgCache.current.delete(bgImage)
-                setBgImage('/W1.png')
-                if (bgInputRef.current) bgInputRef.current.value = ''
-              }}
-            >
-              Reset to default
-            </button>
-          )}
-        </label>
-        <label className="flex flex-col gap-1 text-xs font-bold uppercase text-[#ff2255]">
-          Host
-          <input
-            className="border-2 border-[#ff2255] px-2 py-1 text-sm bg-black text-[#ff2255] outline-none"
-            value={host}
-            onChange={(e) => setHost(e.target.value)}
+          Title (one line per row)
+          <textarea
+            className="border-2 border-[#ff2255] px-2 py-1 text-sm bg-black text-[#ff2255] outline-none resize-none"
+            rows={4}
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
           />
         </label>
         <MultiImageUpload
@@ -307,7 +319,7 @@ export default function KnockoutRecap() {
               key={img?.url ?? 'title'}
               ref={(el) => { boardRefs.current[i] = el }}
               bgImage={bgImage}
-              host={host}
+              title={title}
               controllerImage={img?.url || null}
               imgCache={imgCache.current}
               fontReady={fontReady}
