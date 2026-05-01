@@ -6,22 +6,10 @@ import type { DBoardHandle } from '@/app/components/DBoard'
 import { tripleArrow } from '@/app/components/DBoard/drawing-actions/triple-arrow'
 import { IUploadedImage } from '@/app/types/upload'
 import MultiImageUpload from '@/app/components/MultiImageUpload'
+import { loadImg } from '@/app/utils/loadImg'
+import { loadFonts } from '@/app/utils/loadFonts'
 
 const DBoard = dynamic(() => import('@/app/components/DBoard'), { ssr: false })
-
-
-function loadImg(img: HTMLImageElement): Promise<HTMLImageElement> {
-  return img.complete ? Promise.resolve(img) : new Promise(res => img.addEventListener('load', () => res(img), { once: true }))
-}
-
-async function loadFonts(): Promise<void> {
-  const regular = new FontFace('Horizon', 'url(/Horizon_Regular.otf)')
-  const outlined = new FontFace('Horizon Outlined', 'url(/Horizon_Outlined.otf)')
-  return Promise.all([regular.load(), outlined.load()]).then(([r, o]) => {
-    document.fonts.add(r)
-    document.fonts.add(o)
-  })
-}
 
 function makeControllerDraw(
   bgImage: string,
