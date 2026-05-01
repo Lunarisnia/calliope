@@ -8,6 +8,7 @@ import { IUploadedImage } from '@/app/types/upload'
 import MultiImageUpload from '@/app/components/MultiImageUpload'
 import { loadImg } from '@/app/utils/loadImg'
 import { loadFonts } from '@/app/utils/loadFonts'
+import { segmentName } from '@/app/components/DBoard/drawing-actions/segment-name'
 
 const DBoard = dynamic(() => import('@/app/components/DBoard'), { ssr: false })
 
@@ -80,23 +81,17 @@ function makeControllerDraw(
       else logo.addEventListener('load', drawLogo, { once: true })
 
       // Bottom-left text with per-line dark background
-      ctx.textAlign = 'left'
-      ctx.textBaseline = 'top'
-      ctx.font = '40px "Horizon"'
-      const padX = 16
-      const padY = 10
-      const lineH = 38
-      const textX = 60
-      const textY1 = height - 180
-      const textY2 = textY1 + lineH
-      const w1 = ctx.measureText('FIGHTSTICK').width
-      const w2 = ctx.measureText('FRIDAY').width
-      ctx.fillStyle = '#111111'
-      ctx.fillRect(textX - padX, textY1 - padY, w1 + padX * 2, lineH + padY * 2)
-      ctx.fillRect(textX - padX, textY2 - padY, w2 + padX * 2, lineH + padY * 2)
-      ctx.fillStyle = '#fff'
-      ctx.fillText('FIGHTSTICK', textX, textY1)
-      ctx.fillText('FRIDAY', textX, textY2)
+      segmentName(ctx, {
+        lines: ['FIGHTSTICK', 'FRIDAY'],
+        x: 60,
+        y: height - 180,
+        font: '40px "Horizon"',
+        color: '#ffffff',
+        bgColor: '#111111',
+        padX: 16,
+        padY: 0.4,
+        lineHeight: 38,
+      })
 
       // Triple arrow (unblurred)
       if (showArrow) tripleArrow(ctx, { color: '#ffffff', gap: 4, size: 42, x: width - 320, y: height - 160 })

@@ -4,10 +4,12 @@ import { useState, useCallback, useRef, forwardRef } from 'react'
 import dynamic from 'next/dynamic'
 import type { DBoardHandle } from '@/app/components/DBoard'
 import { tripleArrow } from '@/app/components/DBoard/drawing-actions/triple-arrow'
+import { segmentName } from '@/app/components/DBoard/drawing-actions/segment-name'
 import { IUploadedImage } from '@/app/types/upload'
 import MultiImageUpload from '@/app/components/MultiImageUpload'
 import { loadImg } from '@/app/utils/loadImg'
 import { loadFonts } from '@/app/utils/loadFonts'
+const RED = '#c03535';
 
 const DBoard = dynamic(() => import('@/app/components/DBoard'), { ssr: false })
 
@@ -78,27 +80,20 @@ function makeControllerDraw(
       if (logo.complete) drawLogo()
       else logo.addEventListener('load', drawLogo, { once: true })
 
-      // Bottom-left text with per-line dark background
-      ctx.textAlign = 'left'
-      ctx.textBaseline = 'top'
-      ctx.font = '40px "Horizon"'
-      const padX = 16
-      const padY = 10
-      const lineH = 38
-      const textX = 60
-      const textY1 = height - 180
-      const textY2 = textY1 + lineH
-      const w1 = ctx.measureText('FIGHTSTICK').width
-      const w2 = ctx.measureText('FRIDAY').width
-      ctx.fillStyle = '#111111'
-      ctx.fillRect(textX - padX, textY1 - padY, w1 + padX * 2, lineH + padY * 2)
-      ctx.fillRect(textX - padX, textY2 - padY, w2 + padX * 2, lineH + padY * 2)
-      ctx.fillStyle = '#fff'
-      ctx.fillText('FIGHTSTICK', textX, textY1)
-      ctx.fillText('FRIDAY', textX, textY2)
+      segmentName(ctx, {
+        lines: ['KNOCK OUT', 'REPORTS'],
+        x: 160,
+        y: height - 180,
+        font: '40px "Horizon"',
+        color: RED,
+        bgColor: '#111111',
+        padX: 16,
+        padY: 0.4,
+        lineHeight: 38,
+      })
 
       // Triple arrow (unblurred)
-      tripleArrow(ctx, { color: '#ffffff', gap: 4, size: 42, x: width - 320, y: height - 160 })
+      tripleArrow(ctx, { color: RED, gap: 4, size: 42, x: width - 320, y: height - 160 })
     })
   }
 }
@@ -173,7 +168,6 @@ function makeDraw(
       const blockY = (height - blockH) / 2
 
       const shadow = 14  // red offset shift
-      const RED = '#c03535'
 
       // RECAP rect dimensions (needed inside makeOffscreen)
       const recapY = blockY + padY + lines.length * lineHeight
@@ -222,7 +216,19 @@ function makeDraw(
       ctx.fillStyle = RED
       ctx.fillText('RECAP', cx, recapY)
 
-      tripleArrow(ctx, { color: '#ffffff', gap: 4, size: 42, x: width - 320, y: height - 160 })
+      segmentName(ctx, {
+        lines: ['KNOCK OUT', 'REPORTS'],
+        x: 160,
+        y: height - 180,
+        font: '40px "Horizon"',
+        color: RED,
+        bgColor: '#111111',
+        padX: 16,
+        padY: 0.4,
+        lineHeight: 38,
+      })
+
+      tripleArrow(ctx, { color: RED, gap: 4, size: 42, x: width - 320, y: height - 160 })
     }
 
     const proceed = (loadedBg: HTMLImageElement) =>
