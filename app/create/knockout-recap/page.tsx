@@ -154,7 +154,7 @@ function makeDraw(
       }
 
       const lineHeight = fontSize * 1.5
-      const recapSize = Math.round(fontSize * 0.85)
+      const recapSize = Math.round(fontSize * 1.35)
       const padX = 80
       const padY = 60
 
@@ -173,39 +173,53 @@ function makeDraw(
       const blockY = (height - blockH) / 2
 
       const shadow = 14  // red offset shift
+      const RED = '#c03535'
 
-      // Per-line dark rect + title text (centered)
+      // RECAP rect dimensions (needed inside makeOffscreen)
+      const recapY = blockY + padY + lines.length * lineHeight
+      const recapPadX = padX
+      const recapPadY = padY / 2
+      const recapRx = cx - recapW / 2 - recapPadX
+      const recapRy = recapY - recapPadY
+      const recapRw = recapW + recapPadX * 2
+      const recapRh = recapSize * 1.5 + recapPadY
+
+      const makeOffscreen = (color: string) => {
+        const off = document.createElement('canvas')
+        off.width = width
+        off.height = height
+        const octx = off.getContext('2d')!
+        octx.font = `${fontSize}px "Horizon"`
+        octx.textAlign = 'center'
+        octx.textBaseline = 'top'
+        lines.forEach((line, i) => {
+          const lw = lineWidths[i]
+          const rx = cx - lw / 2 - padX
+          const ry = blockY + padY + i * lineHeight - padY / 2
+          const rw = lw + padX * 2
+          const rh = lineHeight + padY / 2
+          octx.fillRect(rx, ry, rw, rh)
+        })
+        octx.fillRect(recapRx, recapRy, recapRw, recapRh)
+        octx.globalCompositeOperation = 'source-in'
+        octx.fillStyle = color
+        octx.fillRect(0, 0, width, height)
+        return off
+      }
+
+      ctx.drawImage(makeOffscreen(RED), shadow, shadow)
+      ctx.drawImage(makeOffscreen('#111111'), 0, 0)
+
       ctx.font = `${fontSize}px "Horizon"`
       ctx.textAlign = 'center'
       ctx.textBaseline = 'top'
+      ctx.fillStyle = '#ffffff'
       lines.forEach((line, i) => {
-        const lw = lineWidths[i]
-        const rx = cx - lw / 2 - padX
-        const ry = blockY + padY + i * lineHeight - padY / 2
-        const rw = lw + padX * 2
-        const rh = lineHeight + padY / 2
-        ctx.fillStyle = '#ff2255'
-        ctx.fillRect(rx + shadow, ry + shadow, rw, rh)
-        ctx.fillStyle = 'rgba(15, 15, 15, 0.92)'
-        ctx.fillRect(rx, ry, rw, rh)
-        ctx.fillStyle = '#ffffff'
         ctx.fillText(line, cx, blockY + padY + i * lineHeight)
       })
 
-      // RECAP rect + text (centered)
-      const recapY = blockY + padY + titleBlockH + recapSize * 0.3
-      const recapRx = cx - recapW / 2 - padX
-      const recapRy = recapY - padY / 2
-      const recapRw = recapW + padX * 2
-      const recapRh = recapSize * 1.4
-      ctx.fillStyle = '#ff2255'
-      ctx.fillRect(recapRx + shadow, recapRy + shadow, recapRw, recapRh)
-      ctx.fillStyle = 'rgba(15, 15, 15, 0.92)'
-      ctx.fillRect(recapRx, recapRy, recapRw, recapRh)
       ctx.font = `${recapSize}px "Horizon"`
-      ctx.fillStyle = '#ff2255'
-      ctx.textAlign = 'center'
-      ctx.textBaseline = 'top'
+      ctx.fillStyle = RED
       ctx.fillText('RECAP', cx, recapY)
 
       tripleArrow(ctx, { color: '#ffffff', gap: 4, size: 42, x: width - 320, y: height - 160 })
