@@ -26,6 +26,7 @@ function makeControllerDraw(
   placementLabel: string,
   imgCache: Map<string, HTMLImageElement>,
   fontReady: { current: Promise<void> | null },
+  showArrow: boolean,
 ) {
   return (ctx: CanvasRenderingContext2D) => {
     const { width, height } = ctx.canvas
@@ -149,7 +150,7 @@ function makeControllerDraw(
       })
 
       // Triple arrow (unblurred)
-      tripleArrow(ctx, { color: RED, gap: 4, size: 42, x: width - 320, y: height - 160 })
+      if (showArrow) tripleArrow(ctx, { color: RED, gap: 4, size: 42, x: width - 320, y: height - 160 })
     })
   }
 }
@@ -300,14 +301,15 @@ const BoardItem = forwardRef<DBoardHandle, {
   image: string | null
   name: string
   placementLabel: string
+  showArrow: boolean
   imgCache: Map<string, HTMLImageElement>
   fontReady: { current: Promise<void> | null }
-}>(function BoardItem({ bgImage, title, image: controllerImage, name, placementLabel, imgCache, fontReady }, ref) {
+}>(function BoardItem({ bgImage, title, image: controllerImage, name, placementLabel, showArrow, imgCache, fontReady }, ref) {
   const draw = useCallback(
     controllerImage
-      ? makeControllerDraw(bgImage, controllerImage, name, placementLabel, imgCache, fontReady)
+      ? makeControllerDraw(bgImage, controllerImage, name, placementLabel, imgCache, fontReady, showArrow)
       : makeDraw(bgImage, title, imgCache, fontReady),
-    [bgImage, title, controllerImage, name, placementLabel]
+    [bgImage, title, controllerImage, name, placementLabel, showArrow]
   )
   return <DBoard ref={ref} width={1440} height={1800} previewWidth={360} drawAction={draw} />
 })
@@ -417,6 +419,7 @@ export default function KnockoutRecap() {
             image={winner.imageUrl}
             name={winner.name}
             placementLabel={placement(winners.length - 1 - i)}
+            showArrow={i < winners.length - 1}
             imgCache={imgCache.current}
             fontReady={fontReady}
           />
