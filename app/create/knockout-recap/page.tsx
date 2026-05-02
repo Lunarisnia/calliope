@@ -5,10 +5,11 @@ import dynamic from 'next/dynamic'
 import type { DBoardHandle } from '@/app/components/DBoard'
 import { tripleArrow } from '@/app/components/DBoard/drawing-actions/triple-arrow'
 import { segmentName } from '@/app/components/DBoard/drawing-actions/segment-name'
-import { IUploadedImage } from '@/app/types/upload'
-import MultiImageUpload from '@/app/components/MultiImageUpload'
 import { loadImg } from '@/app/utils/loadImg'
 import { loadFonts } from '@/app/utils/loadFonts'
+import { ACCENT } from '@/app/constants/colors'
+import { Winner, WinnerList } from './components/WinnerList'
+
 const RED = '#c03535';
 
 const DBoard = dynamic(() => import('@/app/components/DBoard'), { ssr: false })
@@ -82,7 +83,8 @@ function makeControllerDraw(
       const wTopLeftY = cy + ch + 180;
       // const recapRw = recapW + recapPadX * 2
       // const recapRh = recapSize * 1.5 + recapPadY
-      ctx.fillStyle = '#fff';
+      ctx.fillStyle = '#fff';;
+
       ctx.fillText("Winner", wTopLeftX, wTopLeftY);
 
       // Logo (unblurred)
@@ -251,10 +253,10 @@ function makeDraw(
 const BoardItem = forwardRef<DBoardHandle, {
   bgImage: string
   title: string
-  controllerImage: string | null
+  image: string | null
   imgCache: Map<string, HTMLImageElement>
   fontReady: { current: Promise<void> | null }
-}>(function BoardItem({ bgImage, title, controllerImage, imgCache, fontReady }, ref) {
+}>(function BoardItem({ bgImage, title, image: controllerImage, imgCache, fontReady }, ref) {
   const draw = useCallback(
     controllerImage
       ? makeControllerDraw(bgImage, controllerImage, imgCache, fontReady)
@@ -267,9 +269,9 @@ const BoardItem = forwardRef<DBoardHandle, {
 
 export default function KnockoutRecap() {
   const [bgImage] = useState('/ko-report.png')
-  const [generatedImages, setGeneratedImages] = useState<(IUploadedImage | null)[]>([])
   const [title, setTitle] = useState('TOURNAMENT\nRECAP')
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [winners, setWinners] = useState<Winner[]>([]);
 
   const boardRef = useRef<DBoardHandle>(null)
   const boardRefs = useRef<(DBoardHandle | null)[]>([])
@@ -277,7 +279,7 @@ export default function KnockoutRecap() {
   const fontReady = useRef<Promise<void> | null>(null)
 
   function saveAsImage() {
-    const refs = generatedImages.length > 0 ? boardRefs.current : [boardRef.current]
+    const refs = [boardRef.current, ...boardRefs.current]
     refs.forEach((ref, i) => {
       const url = ref?.toDataURL()
       if (!url) return
@@ -293,13 +295,35 @@ export default function KnockoutRecap() {
     [bgImage, title]
   )
 
+  const onAddWinner = () => {
+    setWinners((prev) => [...prev, { id: crypto.randomUUID(), name: '', imageUrl: '' }])
+  }
+
+  const onChangeWinner = (index: number, patch: Partial<Pick<Winner, 'name' | 'imageUrl'>>) => {
+    setWinners((prev) => prev.map((w, i) => i === index ? { ...w, ...patch } : w))
+  }
+
+  const onRemoveWinner = (index: number) => {
+    setWinners((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  const onMoveWinner = (index: number, direction: 'up' | 'down') => {
+    setWinners((prev) => {
+      const next = [...prev]
+      const target = direction === 'up' ? index - 1 : index + 1
+      if (target < 0 || target >= next.length) return prev
+        ;[next[index], next[target]] = [next[target], next[index]]
+      return next
+    })
+  }
+
   return (
     <div className="flex h-full bg-black">
       {/* Mobile toggle */}
       <button
         type="button"
         onClick={() => setSidebarOpen((o) => !o)}
-        className="md:hidden fixed bottom-4 right-4 z-50 border-2 border-[#ff2255] bg-black text-[#ff2255] text-xs font-bold uppercase px-3 py-2 hover:bg-[#ff2255] hover:text-black transition-colors cursor-pointer"
+        className={`md:hidden fixed bottom-4 right-4 z-50 border-2 border-[${ACCENT}] bg-black text-[${ACCENT}] text-xs font-bold uppercase px-3 py-2 hover:bg-[${ACCENT}] hover:text-black transition-colors cursor-pointer`}
       >
         {sidebarOpen ? 'Close' : 'Menu'}
       </button>
@@ -313,50 +337,42 @@ export default function KnockoutRecap() {
       )}
 
       <aside className={`
-        fixed inset-y-0 left-0 z-40 w-64 bg-black border-r-2 border-[#ff2255] flex flex-col gap-4 p-4 overflow-y-auto
+        fixed inset-y-0 left-0 z-40 w-64 bg-black border-r-2 border-[${ACCENT}] flex flex-col gap-4 p-4 overflow-y-auto
         transition-transform duration-200
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
         md:relative md:translate-x-0 md:shrink-0 md:min-h-0
       `}>
-        <label className="flex flex-col gap-1 text-xs font-bold uppercase text-[#ff2255]">
+        <label className={`flex flex-col gap-1 text-xs font-bold uppercase text-[${ACCENT}]`}>
           Title (one line per row)
           <textarea
-            className="border-2 border-[#ff2255] px-2 py-1 text-sm bg-black text-[#ff2255] outline-none resize-none"
+            className={`border-2 border-[${ACCENT}] px-2 py-1 text-sm bg-black text-[${ACCENT}] outline-none resize-none`}
             rows={4}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
           />
         </label>
-        <MultiImageUpload
-          label="Controller images"
-          onChange={(imgs) => {
-            setGeneratedImages([null, ...imgs])
-          }}
-        />
+        <WinnerList winners={winners} onAddWinner={onAddWinner} onRemoveWinner={onRemoveWinner} onMoveWinner={onMoveWinner} onChangeWinner={onChangeWinner} />
         <button
           type="button"
-          className="mt-auto border-2 border-[#ff2255] px-3 py-2 text-xs font-bold uppercase text-[#ff2255] hover:bg-[#ff2255] hover:text-black transition-colors cursor-pointer"
+          className={`mt-auto border-2 border-[${ACCENT}] px-3 py-2 text-xs font-bold uppercase text-[${ACCENT}] hover:bg-[${ACCENT}] hover:text-black transition-colors cursor-pointer`}
           onClick={saveAsImage}
         >
           Save all as image
         </button>
       </aside>
       <main className="flex-1 flex items-center overflow-x-auto gap-4 px-4">
-        {generatedImages.length > 0 ? (
-          generatedImages.map((img, i) => (
-            <BoardItem
-              key={img?.url ?? 'title'}
-              ref={(el) => { boardRefs.current[i] = el }}
-              bgImage={bgImage}
-              title={title}
-              controllerImage={img?.url || null}
-              imgCache={imgCache.current}
-              fontReady={fontReady}
-            />
-          ))
-        ) : (
-          <DBoard ref={boardRef} width={1440} height={1800} previewWidth={360} drawAction={draw} />
-        )}
+        <DBoard ref={boardRef} width={1440} height={1800} previewWidth={360} drawAction={draw} />
+        {winners.filter(w => w.imageUrl).map((winner, i) => (
+          <BoardItem
+            key={winner.id}
+            ref={(el) => { boardRefs.current[i] = el }}
+            bgImage={bgImage}
+            title={title}
+            image={winner.imageUrl}
+            imgCache={imgCache.current}
+            fontReady={fontReady}
+          />
+        ))}
       </main>
     </div>
   )
