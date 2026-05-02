@@ -56,7 +56,8 @@ function makeControllerDraw(
       const cw = loadedController.naturalWidth * scale
       const ch = loadedController.naturalHeight * scale
       const cx = (width - cw) / 2
-      const cy = (height - ch) / 2
+      let cy = (height - ch) / 2
+      cy -= cy * 0.4
       ctx.drawImage(loadedController, cx, cy, cw, ch)
 
       ctx.strokeStyle = '#fff'
@@ -74,6 +75,15 @@ function makeControllerDraw(
       ctx.textAlign = 'right'
       ctx.textBaseline = 'bottom'
       ctx.fillText('Via +CREW Exclusive', cx + cw, cy - 16)
+
+      ctx.font = `100px "Horizon"`
+      const winnerNameTextSize = ctx.measureText("Winner");
+      const wTopLeftX = cx + winnerNameTextSize.width;
+      const wTopLeftY = cy + ch + 180;
+      // const recapRw = recapW + recapPadX * 2
+      // const recapRh = recapSize * 1.5 + recapPadY
+      ctx.fillStyle = '#fff';
+      ctx.fillText("Winner", wTopLeftX, wTopLeftY);
 
       // Logo (unblurred)
       const drawLogo = () => ctx.drawImage(logo, 70, 60, logo.naturalWidth * 0.3, logo.naturalHeight * 0.3)
@@ -155,7 +165,6 @@ function makeDraw(
 
       ctx.font = `${fontSize}px "Horizon"`
       const lineWidths = lines.map(l => ctx.measureText(l).width)
-      const textBlockW = Math.max(...lineWidths)
       const titleBlockH = lines.length * lineHeight
 
       ctx.font = `${recapSize}px "Horizon"`
@@ -186,7 +195,7 @@ function makeDraw(
         octx.font = `${fontSize}px "Horizon"`
         octx.textAlign = 'center'
         octx.textBaseline = 'top'
-        lines.forEach((line, i) => {
+        lines.forEach((_, i) => {
           const lw = lineWidths[i]
           const rx = cx - lw / 2 - padX
           const ry = blockY + padY + i * lineHeight - padY / 2
