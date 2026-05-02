@@ -8,6 +8,7 @@ import { IUploadedImage } from '@/app/types/upload'
 import MultiImageUpload from '@/app/components/MultiImageUpload'
 import { loadImg } from '@/app/utils/loadImg'
 import { loadFonts } from '@/app/utils/loadFonts'
+import { DARK } from '@/app/constants/colors'
 import { segmentName } from '@/app/components/DBoard/drawing-actions/segment-name'
 
 const DBoard = dynamic(() => import('@/app/components/DBoard'), { ssr: false })
@@ -87,7 +88,7 @@ function makeControllerDraw(
         y: height - 180,
         font: '40px "Horizon"',
         color: '#ffffff',
-        bgColor: '#111111',
+        bgColor: DARK,
         padX: 16,
         padY: 0.4,
         lineHeight: 38,

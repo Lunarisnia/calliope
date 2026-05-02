@@ -7,16 +7,23 @@ import { tripleArrow } from '@/app/components/DBoard/drawing-actions/triple-arro
 import { segmentName } from '@/app/components/DBoard/drawing-actions/segment-name'
 import { loadImg } from '@/app/utils/loadImg'
 import { loadFonts } from '@/app/utils/loadFonts'
-import { ACCENT } from '@/app/constants/colors'
+import { ACCENT, DARK } from '@/app/constants/colors'
 import { Winner, WinnerList } from './components/WinnerList'
 
 const RED = '#c03535';
 
 const DBoard = dynamic(() => import('@/app/components/DBoard'), { ssr: false })
 
+function placement(index: number) {
+  const labels = ['1ST', '2ND', '3RD']
+  return (labels[index] ?? `${index + 1}TH`) + ' PLACE'
+}
+
 function makeControllerDraw(
   bgImage: string,
   controllerImage: string,
+  name: string,
+  placementLabel: string,
   imgCache: Map<string, HTMLImageElement>,
   fontReady: { current: Promise<void> | null },
 ) {
@@ -77,15 +84,52 @@ function makeControllerDraw(
       ctx.textBaseline = 'bottom'
       ctx.fillText('Via +CREW Exclusive', cx + cw, cy - 16)
 
-      ctx.font = `100px "Horizon"`
-      const winnerNameTextSize = ctx.measureText("Winner");
-      const wTopLeftX = cx + winnerNameTextSize.width;
-      const wTopLeftY = cy + ch + 180;
-      // const recapRw = recapW + recapPadX * 2
-      // const recapRh = recapSize * 1.5 + recapPadY
-      ctx.fillStyle = '#fff';;
+      // Winner name block
+      const blockX = cx - 40
+      let labelSize = 80
+      let nameSize = 100
+      const blockPadX = 32
+      const blockPadY = 24
+      const lineGap = 8
+      const maxTextW = width * 0.8 - blockPadX * 2
 
-      ctx.fillText("Winner", wTopLeftX, wTopLeftY);
+      ctx.font = `${nameSize}px "Horizon"`
+      while (ctx.measureText(name.toUpperCase() || ' ').width > maxTextW && nameSize > 20) {
+        nameSize--
+        ctx.font = `${nameSize}px "Horizon"`
+      }
+
+      ctx.font = `${labelSize}px "Horizon"`
+      while (ctx.measureText(placementLabel.toUpperCase()).width > maxTextW && labelSize > 20) {
+        labelSize--
+        ctx.font = `${labelSize}px "Horizon"`
+      }
+
+      ctx.font = `${labelSize}px "Horizon"`
+      const labelW = ctx.measureText(placementLabel.toUpperCase()).width
+      ctx.font = `${nameSize}px "Horizon"`
+      const nameW = ctx.measureText(name.toUpperCase() || ' ').width
+
+      const blockW = Math.min(Math.max(labelW, nameW) + blockPadX * 2, width * 0.8)
+      const blockH = labelSize + lineGap + nameSize + blockPadY * 2
+      const blockY = cy + ch + 20
+
+      const shadow = 14
+      ctx.fillStyle = RED
+      ctx.fillRect(blockX + shadow, blockY + shadow, blockW, blockH)
+      ctx.fillStyle = DARK
+      ctx.fillRect(blockX, blockY, blockW, blockH)
+
+      ctx.textAlign = 'left'
+      ctx.textBaseline = 'top'
+
+      ctx.font = `${labelSize}px "Horizon"`
+      ctx.fillStyle = RED
+      ctx.fillText(placementLabel.toUpperCase(), blockX + blockPadX, blockY + blockPadY)
+
+      ctx.font = `${nameSize}px "Horizon"`
+      ctx.fillStyle = '#ffffff'
+      ctx.fillText(name.toUpperCase() || ' ', blockX + blockPadX, blockY + blockPadY + labelSize + lineGap)
 
       // Logo (unblurred)
       const drawLogo = () => ctx.drawImage(logo, 70, 60, logo.naturalWidth * 0.3, logo.naturalHeight * 0.3)
@@ -98,7 +142,7 @@ function makeControllerDraw(
         y: height - 180,
         font: '40px "Horizon"',
         color: RED,
-        bgColor: '#111111',
+        bgColor: DARK,
         padX: 16,
         padY: 0.4,
         lineHeight: 38,
@@ -213,7 +257,7 @@ function makeDraw(
       }
 
       ctx.drawImage(makeOffscreen(RED), shadow, shadow)
-      ctx.drawImage(makeOffscreen('#111111'), 0, 0)
+      ctx.drawImage(makeOffscreen(DARK), 0, 0)
 
       ctx.font = `${fontSize}px "Horizon"`
       ctx.textAlign = 'center'
@@ -233,7 +277,7 @@ function makeDraw(
         y: height - 180,
         font: '40px "Horizon"',
         color: RED,
-        bgColor: '#111111',
+        bgColor: DARK,
         padX: 16,
         padY: 0.4,
         lineHeight: 38,
@@ -254,14 +298,16 @@ const BoardItem = forwardRef<DBoardHandle, {
   bgImage: string
   title: string
   image: string | null
+  name: string
+  placementLabel: string
   imgCache: Map<string, HTMLImageElement>
   fontReady: { current: Promise<void> | null }
-}>(function BoardItem({ bgImage, title, image: controllerImage, imgCache, fontReady }, ref) {
+}>(function BoardItem({ bgImage, title, image: controllerImage, name, placementLabel, imgCache, fontReady }, ref) {
   const draw = useCallback(
     controllerImage
-      ? makeControllerDraw(bgImage, controllerImage, imgCache, fontReady)
+      ? makeControllerDraw(bgImage, controllerImage, name, placementLabel, imgCache, fontReady)
       : makeDraw(bgImage, title, imgCache, fontReady),
-    [bgImage, title, controllerImage]
+    [bgImage, title, controllerImage, name, placementLabel]
   )
   return <DBoard ref={ref} width={1440} height={1800} previewWidth={360} drawAction={draw} />
 })
@@ -362,13 +408,15 @@ export default function KnockoutRecap() {
       </aside>
       <main className="flex-1 flex items-center overflow-x-auto gap-4 px-4">
         <DBoard ref={boardRef} width={1440} height={1800} previewWidth={360} drawAction={draw} />
-        {winners.filter(w => w.imageUrl).map((winner, i) => (
+        {winners.map((winner, i) => (
           <BoardItem
             key={winner.id}
             ref={(el) => { boardRefs.current[i] = el }}
             bgImage={bgImage}
             title={title}
             image={winner.imageUrl}
+            name={winner.name}
+            placementLabel={placement(winners.length - 1 - i)}
             imgCache={imgCache.current}
             fontReady={fontReady}
           />
