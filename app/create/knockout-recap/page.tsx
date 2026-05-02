@@ -333,7 +333,8 @@ export default function KnockoutRecap() {
       if (!url) return
       const a = document.createElement('a')
       a.href = url
-      a.download = `knockout-recap-${i}.png`
+      const slug = title.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '').toLowerCase()
+      a.download = `knockout-recap-${slug}-${i}.png`
       a.click()
     })
   }
